@@ -1,0 +1,102 @@
+# Mini Demo - Gestor de Proyectos
+
+## 📋 Descripción
+API REST para gestión básica de proyectos y tareas con autenticación JWT. Demo para TFU3 - Soluciones de Arquitectura.
+
+## 🏗️ Arquitectura
+- **Escalabilidad**: Vertical (Docker container escalable)
+- **Base de datos**: PostgreSQL (ACID)
+- **Contenedores**: Docker + docker-compose
+- **API**: REST stateless con JWT
+
+## 📊 Modelos de Datos
+
+### Usuario
+```sql
+CREATE TABLE usuarios (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Proyecto  
+```sql
+CREATE TABLE proyectos (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    user_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Tarea
+```sql
+CREATE TABLE tareas (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pendiente' CHECK (status IN ('pendiente', 'completada')),
+    project_id INTEGER REFERENCES proyectos(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+## 🌐 API Endpoints
+
+### Autenticación
+- `POST /api/auth/register` - Registro de usuario
+- `POST /api/auth/login` - Login de usuario
+
+### Proyectos (requieren autenticación)
+- `GET /api/projects` - Listar mis proyectos
+- `POST /api/projects` - Crear proyecto
+
+### Tareas (requieren autenticación)
+- `GET /api/projects/:id/tasks` - Listar tareas del proyecto
+- `POST /api/projects/:id/tasks` - Crear tarea en proyecto
+- `PATCH /api/tasks/:id/toggle` - Cambiar estado de tarea
+
+
+## 🐳 Instalación y Ejecución
+
+### Con Docker (recomendado)
+```bash
+# Clonar repositorio
+git clone <repo-url>
+cd proyecto-demo
+
+# Levantar servicios
+docker-compose up --build
+
+# La aplicación estará en http://localhost:3000
+# PostgreSQL en puerto 5432
+```
+
+## 📝 Notas de Implementación
+
+### Variables de Entorno
+```env
+DATABASE_URL=postgresql://user:pass@db:5432/proyecto_db
+JWT_SECRET=tu_secret_super_seguro
+PORT=3000
+```
+
+
+## 🔮 Extensiones Futuras (si da tiempo)
+
+### Compartir Proyectos
+```sql
+-- Tabla adicional para compartir proyectos
+CREATE TABLE project_users (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES proyectos(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES usuarios(id) ON DELETE CASCADE,
+    role VARCHAR(20) DEFAULT 'viewer' CHECK (role IN ('owner', 'editor', 'viewer')),
+    UNIQUE(project_id, user_id)
+);
+```
+
+### Endpoint adicional
+- `POST /api/projects/:id/share` - Compartir proyecto con usuario
