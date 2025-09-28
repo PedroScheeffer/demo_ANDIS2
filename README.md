@@ -18,6 +18,6 @@ docker compose up -d (--build --force-recreate opcional)
 ```
 El backend tiene hotreload, no es necesario volver a reiniciar el container para ver cambios. 
 
-## 📝 Notas de Implementación
+## Notas de Implementación
 
 
