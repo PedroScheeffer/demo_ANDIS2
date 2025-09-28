@@ -1,0 +1,32 @@
+include: 
+  - ./docker/infra.yaml
+  
+# secrets:  
+#   db_user:
+#     file: ./docker/db_user.txt
+#   db_password:
+#     file: ./docker/db_password.txt
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "5000:5000"
+    networks:
+      - my_network
+    environment:
+      - DATABASE_URL=postgresql://postgres:example@db:5432/postgres
+    volumes:
+      - ./backend/src:/app/src
+      - temp_data:/app/temp_data
+    depends_on:
+      - db
+
+volumes:
+  temp_data:
+
+networks:
+  my_network:
