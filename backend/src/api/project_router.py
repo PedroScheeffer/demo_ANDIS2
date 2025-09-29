@@ -3,8 +3,10 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from models.project import ProjectCreate, Project
+from models.user import User
 from services.project_service import ProjectService
 from config.database import get_db
+from auth import get_current_user
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -12,14 +14,18 @@ def get_project_service(db: Session = Depends(get_db)) -> ProjectService:
     return ProjectService(db)
 
 @router.get("/", response_model=List[Project])
-def get_projects(service: ProjectService = Depends(get_project_service)):
+def get_projects(
+    service: ProjectService = Depends(get_project_service),
+    current_user: User = Depends(get_current_user)
+):
     """Listar todos los proyectos"""
     return service.get_all_projects()
 
 @router.post("/", response_model=Project)
 def create_project(
     project: ProjectCreate,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: User = Depends(get_current_user)
 ):
     """Crear un nuevo proyecto"""
     return service.create_project(project)
@@ -27,7 +33,8 @@ def create_project(
 @router.get("/{project_id}", response_model=Project)
 def get_project(
     project_id: int,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: User = Depends(get_current_user)
 ):
     """Obtener un proyecto específico"""
     project = service.get_project_by_id(project_id)
@@ -38,7 +45,8 @@ def get_project(
 @router.delete("/{project_id}")
 def delete_project(
     project_id: int,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: User = Depends(get_current_user)
 ):
     """Eliminar un proyecto"""
     if not service.delete_project(project_id):
@@ -48,7 +56,8 @@ def delete_project(
 @router.get("/user/{user_id}", response_model=List[Project])
 def get_projects_by_user(
     user_id: int,
-    service: ProjectService = Depends(get_project_service)
+    service: ProjectService = Depends(get_project_service),
+    current_user: User = Depends(get_current_user)
 ):
     """Obtener todos los proyectos de un usuario"""
     return service.get_projects_by_user(user_id)
