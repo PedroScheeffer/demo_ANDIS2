@@ -29,8 +29,7 @@ class UserRepository:
         return self._to_domain(db_obj) if db_obj else None
 
     def create(self, user_data: UserCreate) -> User:
-        import hashlib
-        password_hash = hashlib.sha256(user_data.password.encode()).hexdigest()
+        password_hash = User.hash_password(user_data.password)
 
         db_obj = self._UserDB(
             nombre=user_data.nombre,
@@ -50,8 +49,7 @@ class UserRepository:
         db_obj.nombre = user_data.nombre
         db_obj.email = user_data.email
         if user_data.password:
-            import hashlib
-            db_obj.password_hash = hashlib.sha256(user_data.password.encode()).hexdigest()
+            db_obj.password_hash = User.hash_password(user_data.password)
 
         self.db.commit()
         self.db.refresh(db_obj)
