@@ -1,24 +1,38 @@
-include: 
+include:
   - ./docker/infra.yaml
-  
-# secrets:  
-#   db_user:
-#     file: ./docker/db_user.txt
-#   db_password:
-#     file: ./docker/db_password.txt
 
 services:
-  backend:
+  backend_a:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: backend
+    container_name: backend_a
     ports:
-      - "5000:5000"
+      - "8000:5000"          # HOST:CONTENEDOR
     networks:
       - my_network
     environment:
+      - SERVICE_NAME=backend_a
       - DATABASE_URL=postgresql://postgres:example@db:5432/postgres
+    volumes:
+      - ./backend/src:/app/src
+      - temp_data:/app/temp_data
+    depends_on:
+      - db
+
+  backend_b:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend_b
+    ports:
+      - "8001:5000"          # HOST:CONTENEDOR
+    networks:
+      - my_network
+    environment:
+      - SERVICE_NAME=backend_b
+      - DATABASE_URL=postgresql://postgres:example@db:5432/postgres
+      - INIT_DB=1            # ← Solo esta réplica inicializa DB
     volumes:
       - ./backend/src:/app/src
       - temp_data:/app/temp_data
