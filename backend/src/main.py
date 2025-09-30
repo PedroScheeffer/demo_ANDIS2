@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +47,13 @@ def read_root() -> dict[str, Any]:
             "redoc": "/redoc"
         }
     }
+
+
+@app.get("/health")
+@app.get("/api/health")
+async def health():
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 
 if __name__ == "__main__":
     import uvicorn
