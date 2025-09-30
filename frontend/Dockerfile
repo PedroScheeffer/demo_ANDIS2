@@ -1,18 +1,18 @@
 FROM node
-# Set working directory
+
 WORKDIR /app
 
-# Copy package files
+# Copy manifests
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm ci
+# If no lock file present fallback to npm install
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-# Copy source code
 COPY . .
 
-# Expose port 5173 (Vite dev server port)
-EXPOSE 5173
+# Build for production (recommended)
+RUN npm run build
 
-# Start the application in development mode with hot reload
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+EXPOSE 3000
+# SvelteKit preview (or use an adapter)
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
