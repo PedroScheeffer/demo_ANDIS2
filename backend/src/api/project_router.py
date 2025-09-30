@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from sqlalchemy.orm import Session
 
+from backend.src.models.user import User
 from models.project import ProjectCreate, Project
-from models.user import User
 from services.project_service import ProjectService
 from config.database import get_db
 from config.auth_dependency import get_current_user
