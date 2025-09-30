@@ -12,8 +12,7 @@ class UserRepository:
         __tablename__ = "users"
 
         id: Mapped[int] = mapped_column(primary_key=True, index=True)
-        nombre: Mapped[str] = mapped_column(String)
-        email: Mapped[str] = mapped_column(String, unique=True, index=True)
+        nombre: Mapped[str] = mapped_column(String, unique=True, index=True)
         password_hash: Mapped[str] = mapped_column(String)
         created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
 
@@ -24,16 +23,16 @@ class UserRepository:
         db_obj = self.db.query(self._UserDB).filter(self._UserDB.id == user_id).first()
         return self._to_domain(db_obj) if db_obj else None
 
-    def get_by_email(self, email: str) -> Optional[User]:
-        db_obj = self.db.query(self._UserDB).filter(self._UserDB.email == email).first()
+    def get_by_nombre(self, nombre: str) -> Optional[User]:
+        db_obj = self.db.query(self._UserDB).filter(self._UserDB.nombre == nombre).first()
         return self._to_domain(db_obj) if db_obj else None
 
     def create(self, user_data: UserCreate) -> User:
-        password_hash = User.hash_password(user_data.password)
+        import hashlib
+        password_hash = hashlib.sha256(user_data.password.encode()).hexdigest()
 
         db_obj = self._UserDB(
             nombre=user_data.nombre,
-            email=user_data.email,
             password_hash=password_hash
         )
         self.db.add(db_obj)
@@ -47,9 +46,9 @@ class UserRepository:
             return None
 
         db_obj.nombre = user_data.nombre
-        db_obj.email = user_data.email
         if user_data.password:
-            db_obj.password_hash = User.hash_password(user_data.password)
+            import hashlib
+            db_obj.password_hash = hashlib.sha256(user_data.password.encode()).hexdigest()
 
         self.db.commit()
         self.db.refresh(db_obj)
@@ -72,7 +71,6 @@ class UserRepository:
         return User(
             id=db_obj.id,
             nombre=db_obj.nombre,
-            email=db_obj.email,
             password_hash=db_obj.password_hash,
             created_at=db_obj.created_at
         )

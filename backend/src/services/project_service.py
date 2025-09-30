@@ -18,7 +18,7 @@ class ProjectService:
         project = self.project_repo.get_by_id(project_id)
         return self._to_response(project) if project else None
 
-    def create_project(self, project_data: ProjectCreate, user_id: int = 1) -> Project:
+    def create_project(self, project_data: ProjectCreate, user_id: int) -> Project:
         """Create a new project"""
         project = self.project_repo.create(project_data, user_id)
         return self._to_response(project)

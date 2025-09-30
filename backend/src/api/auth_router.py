@@ -1,113 +1,84 @@
-from datetime import timedelta
-from fastapi import APIRouter, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+import hashlib
 
-from models.user import UserCreate, UserLogin, Token, User
+from models.user import UserCreate
 from services.user_service import UserService
 from config.database import get_db
-from auth import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
+from config.jwt import create_access_token
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str
+    user: dict
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(db)
 
-@router.post("/register", response_model=User)
-def register(
-    user_data: UserCreate,
-    service: UserService = Depends(get_user_service)
-):
-    """Register a new user"""
-    # Check if user already exists
-    existing_user = service.get_user_by_email(user_data.email)
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
+def verify_password(password: str, hashed: str) -> bool:
+    """Verify password against hash using the same method as repository"""
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    return password_hash == hashed
 
-    # Create new user
-    return service.create_user(user_data)
-
-@router.post("/login", response_model=Token)
+@router.post("/login", response_model=AuthResponse)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    login_data: LoginRequest,
     service: UserService = Depends(get_user_service)
 ):
-    """Login user and return access token"""
-    # Get user by email (OAuth2PasswordRequestForm uses username field for email)
-    user = service.get_user_by_email(form_data.username)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    """Login user with username and password"""
+    user = service.get_user_by_nombre(login_data.username)
+    if not user or not user.password_hash:
+        raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    # Get user with password hash for verification
-    from repos.user_repository import UserRepository
-    user_repo = UserRepository(service.user_repo.db)
-    user_with_hash = user_repo.get_by_email(form_data.username)
+    if not verify_password(login_data.password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
 
-    # Verify password
-    if not user_with_hash or not user_with_hash.verify_password(form_data.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    # Create JWT token
+    access_token = create_access_token(data={"sub": str(user.id), "username": user.nombre})
 
-    # Create access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+    return AuthResponse(
+        access_token=access_token,
+        token_type="bearer",
+        user={"id": str(user.id), "username": user.nombre}
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
-
-@router.post("/login-json", response_model=Token)
-def login_json(
-    user_credentials: UserLogin,
+@router.post("/register", response_model=AuthResponse)
+def register(
+    register_data: LoginRequest,
     service: UserService = Depends(get_user_service)
 ):
-    """Login user with JSON payload and return access token"""
-    # Get user by email
-    user = service.get_user_by_email(user_credentials.email)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    """Register new user with username and password"""
+    # Check if user already exists
+    existing_user = service.get_user_by_nombre(register_data.username)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User already exists")
 
-    # Get user with password hash for verification
-    from repos.user_repository import UserRepository
-    user_repo = UserRepository(service.user_repo.db)
-    user_with_hash = user_repo.get_by_email(user_credentials.email)
-
-    # Verify password
-    if not user_with_hash or not user_with_hash.verify_password(user_credentials.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Create access token
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+    # Create new user (password hashing is handled by the repository)
+    user_data = UserCreate(
+        nombre=register_data.username,
+        password=register_data.password
     )
 
-    return {"access_token": access_token, "token_type": "bearer"}
+    try:
+        user = service.create_user(user_data)
 
-@router.get("/me", response_model=User)
-def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """Get current user information"""
-    return current_user
+        # Create JWT token
+        access_token = create_access_token(data={"sub": str(user.id), "username": user.nombre})
 
-@router.post("/logout")
-def logout():
-    """Logout user (client-side token removal)"""
-    return {"message": "Successfully logged out"}
+        return AuthResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user={"id": str(user.id), "username": user.nombre}
+        )
+    except Exception as e:
+        print(f"Registration error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
