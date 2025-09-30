@@ -25,6 +25,24 @@ services:
     depends_on:
       - db
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - my_network
+    environment:
+      - BACKEND_URL=http://backend:5000/api
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/static:/app/static
+      - /app/node_modules
+    depends_on:
+      - backend
+
 volumes:
   temp_data:
 

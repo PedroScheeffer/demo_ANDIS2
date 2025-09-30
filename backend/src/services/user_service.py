@@ -18,9 +18,9 @@ class UserService:
         user = self.user_repo.get_by_id(user_id)
         return self._to_response(user) if user else None
 
-    def get_user_by_email(self, email: str) -> Optional[User]:
-        """Get user by email"""
-        user = self.user_repo.get_by_email(email)
+    def get_user_by_nombre(self, nombre: str) -> Optional[User]:
+        """Get user by nombre (username)"""
+        user = self.user_repo.get_by_nombre(nombre)
         return self._to_response(user) if user else None
 
     def create_user(self, user_data: UserCreate) -> User:
@@ -42,6 +42,6 @@ class UserService:
         return User(
             id=user.id,
             nombre=user.nombre,
-            email=user.email,
-            created_at=user.created_at
+            created_at=user.created_at,
+            password_hash=user.password_hash
         )

@@ -6,6 +6,7 @@ from config.database import init_db
 from api.project_router import router as project_router
 from api.user_router import router as user_router
 from api.task_router import router as task_router
+from api.auth_router import router as auth_router
 
 
 from contextlib import asynccontextmanager
@@ -27,6 +28,7 @@ app.add_middleware(
 
 # Include routers
 from repos import user_repository, task_repository, project_repository  # type: ignore Import to register all models
+app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(user_router)
 app.include_router(task_router)
