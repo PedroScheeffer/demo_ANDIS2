@@ -1,13 +1,12 @@
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export interface AuthResponse {
-  id: string;
-  username: string;
-}
-
-export interface LoginRequest {
-  username: string;
-  password: string;
+  access_token: string;
+  token_type: string;
+  user: {
+    id: string;
+    username: string;
+  };
 }
 
 export async function login(username: string, password: string): Promise<AuthResponse> {
@@ -17,7 +16,6 @@ export async function login(username: string, password: string): Promise<AuthRes
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ username, password }),
-    credentials: 'include', // Important for cookies
   });
 
   if (!response.ok) {
@@ -25,7 +23,15 @@ export async function login(username: string, password: string): Promise<AuthRes
     throw new Error(error.detail || 'Login failed');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Store token and auth response in localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('auth_response', JSON.stringify(data));
+  }
+
+  return data;
 }
 
 export async function register(username: string, password: string): Promise<AuthResponse> {
@@ -35,7 +41,6 @@ export async function register(username: string, password: string): Promise<Auth
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ username, password }),
-    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -43,12 +48,28 @@ export async function register(username: string, password: string): Promise<Auth
     throw new Error(error.detail || 'Registration failed');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // Store token and auth response in localStorage
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('access_token', data.access_token);
+    localStorage.setItem('auth_response', JSON.stringify(data));
+  }
+
+  return data;
 }
 
 export async function logout(): Promise<void> {
   // Clear local session data
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('user');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('auth_response');
   }
+}
+
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('access_token');
+  }
+  return null;
 }

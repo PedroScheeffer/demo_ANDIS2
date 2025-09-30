@@ -4,13 +4,14 @@
     import type { AuthResponse } from '$lib/services/auth_service';
     import { logout } from '$lib/services/auth_service';
     import ProjectDashboard from '$lib/components/ProjectDashboard.svelte';
+    import type { User } from '$lib/models/user';
 
-    let user = $state<AuthResponse | null>(null);
+    let auth_response = $state<AuthResponse | null>(null);
 
     onMount(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            user = JSON.parse(storedUser);
+        const storedAuthResponse = localStorage.getItem('auth_response');
+        if (storedAuthResponse) {
+            auth_response = JSON.parse(storedAuthResponse);
         } else {
             goto('/login');
         }
@@ -20,9 +21,12 @@
         await logout();
         goto('/login');
     }
+
+    let userId = $derived(auth_response ? Number(auth_response.user.id) : undefined);
+    let username = $derived(auth_response?.user.username ?? '');
 </script>
 
-{#if user}
+{#if auth_response}
     <div class="flex flex-col items-center gap-8 min-h-screen mt-8 px-4">
         <div class="w-full max-w-4xl flex justify-between items-center">
             <h1 class="text-3xl font-bold">Demo UCU TODO</h1>
@@ -34,9 +38,11 @@
             </button>
         </div>
 
-        <p class="text-lg">Bienvenido {user.username}</p>
+        <p class="text-lg">Bienvenido {username}</p>
 
-        <ProjectDashboard userId={Number(user.id)} />
+        {#if userId}
+            <ProjectDashboard {userId} />
+        {/if}
     </div>
 {:else}
     <div class="flex items-center justify-center min-h-screen">

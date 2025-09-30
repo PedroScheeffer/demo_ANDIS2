@@ -56,14 +56,3 @@ def delete_user(
     if not service.delete_user(user_id):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return {"message": "Usuario eliminado exitosamente"}
-
-@router.get("/email/{email}", response_model=User)
-def get_user_by_email(
-    email: str,
-    service: UserService = Depends(get_user_service)
-):
-    """Obtener un usuario por email"""
-    user = service.get_user_by_email(email)
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return user

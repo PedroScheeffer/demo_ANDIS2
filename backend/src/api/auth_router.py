@@ -6,6 +6,7 @@ import hashlib
 from models.user import UserCreate
 from services.user_service import UserService
 from config.database import get_db
+from config.jwt import create_access_token
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -14,8 +15,9 @@ class LoginRequest(BaseModel):
     password: str
 
 class AuthResponse(BaseModel):
-    id: str
-    username: str
+    access_token: str
+    token_type: str
+    user: dict
 
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(db)
@@ -38,9 +40,13 @@ def login(
     if not verify_password(login_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid credentials")
 
+    # Create JWT token
+    access_token = create_access_token(data={"sub": str(user.id), "username": user.nombre})
+
     return AuthResponse(
-        id=str(user.id),
-        username=user.nombre
+        access_token=access_token,
+        token_type="bearer",
+        user={"id": str(user.id), "username": user.nombre}
     )
 
 @router.post("/register", response_model=AuthResponse)
@@ -62,9 +68,17 @@ def register(
 
     try:
         user = service.create_user(user_data)
+
+        # Create JWT token
+        access_token = create_access_token(data={"sub": str(user.id), "username": user.nombre})
+
         return AuthResponse(
-            id=str(user.id),
-            username=user.nombre
+            access_token=access_token,
+            token_type="bearer",
+            user={"id": str(user.id), "username": user.nombre}
         )
-    except Exception:
-        raise HTTPException(status_code=500, detail="Registration failed")
+    except Exception as e:
+        print(f"Registration error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")

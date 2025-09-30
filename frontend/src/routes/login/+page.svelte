@@ -19,12 +19,9 @@
         error = null;
 
         try {
-            const authResponse = await login(username, password);
+            await login(username, password);
 
-            // Store user data in localStorage
-            localStorage.setItem('user', JSON.stringify(authResponse));
-
-            // Redirect to home
+            // Redirect to home (login service already stores auth_response)
             goto('/');
         } catch (e) {
             error = e instanceof Error ? e.message : 'Login failed';
