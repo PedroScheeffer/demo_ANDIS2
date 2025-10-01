@@ -3,7 +3,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: backend
     environment:
       - DATABASE_URL=postgresql://postgres:example@db:5432/postgres
     depends_on:
@@ -24,7 +23,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: frontend
     environment:
       # Use the public backend domain so built assets point correctly (adjust if using another domain)
       - VITE_API_BASE_URL=https://api.scheeffer.net/api
@@ -43,7 +41,6 @@ services:
       start_period: 25s
   db:
     image: postgres
-    container_name: postgres
     restart: always
     environment:
       POSTGRES_DB: postgres
