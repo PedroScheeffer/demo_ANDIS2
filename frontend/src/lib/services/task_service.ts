@@ -2,7 +2,7 @@ import type { Task, TaskCreate } from '$lib/models';
 import { getAuthToken } from './auth_service';
 
 // Resolve API base URL from Vite env at build time, fallback to localhost for local dev.
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:5000/api';
 
 function getAuthHeaders(): HeadersInit {
   const token = getAuthToken();
