@@ -10,8 +10,9 @@ services:
       - db
     networks:
       - my_network
-    ports:
-      - "5000:5000"
+    # Coolify/Traefik will route internally; no need to bind host port
+    expose:
+      - "5000"
 
   frontend:
     build:
@@ -19,13 +20,15 @@ services:
       dockerfile: Dockerfile
     container_name: frontend
     environment:
-      - VITE_API_BASE_URL=http://backend:5000/api
+      # Use the public backend domain so built assets point correctly (adjust if using another domain)
+      - VITE_API_BASE_URL=https://api.scheeffer.net/api
     depends_on:
       - backend
     networks:
       - my_network
-    ports:
-      - "3000:3000"
+    # Expose only inside docker network; external access via proxy
+    expose:
+      - "3000"
 
   db:
     image: postgres
@@ -39,8 +42,9 @@ services:
       - my_network
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    # Uncomment to access Postgres directly from host (e.g. psql):
+    # ports:
+    #   - "5432:5432"
 
 volumes:
   postgres_data:
