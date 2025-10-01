@@ -13,6 +13,12 @@ services:
     # Coolify/Traefik will route internally; no need to bind host port
     expose:
       - "5000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   frontend:
     build:
@@ -29,7 +35,12 @@ services:
     # Expose only inside docker network; external access via proxy
     expose:
       - "3000"
-
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
   db:
     image: postgres
     container_name: postgres
