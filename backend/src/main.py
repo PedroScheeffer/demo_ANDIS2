@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from config.database import init_db
 from api.project_router import router as project_router
@@ -18,6 +19,10 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Gestor de Proyectos API", lifespan=lifespan)
+app.router.redirect_slashes = False  # prevent 307 redirects that can downgrade scheme
+
+# Add BEFORE CORS (order not critical here but early is fine)
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.add_middleware(
     CORSMiddleware,
@@ -57,4 +62,4 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=5000)
+    uvicorn.run(app, host="0.0.0.0", port=5000, proxy_headers=True, forwarded_allow_ips="*")

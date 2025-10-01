@@ -18,5 +18,4 @@ COPY . .
 
 EXPOSE 5000
 
-# Production (no --reload). With PYTHONPATH including /app/src we can reference main directly.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000", "--proxy-headers", "--forwarded-allow-ips", "*"]
