@@ -2,16 +2,14 @@ from datetime import datetime
 from typing import Any
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from config.database import init_db
 from api.project_router import router as project_router
 from api.user_router import router as user_router
 from api.task_router import router as task_router
 from api.auth_router import router as auth_router
-
-
 from contextlib import asynccontextmanager
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database on startup"""
@@ -19,10 +17,8 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(title="Gestor de Proyectos API", lifespan=lifespan)
-app.router.redirect_slashes = False  # prevent 307 redirects that can downgrade scheme
+app.router.redirect_slashes = False  # avoid 307 redirects
 
-# Add BEFORE CORS (order not critical here but early is fine)
-app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 
 app.add_middleware(
     CORSMiddleware,
@@ -53,12 +49,10 @@ def read_root() -> dict[str, Any]:
         }
     }
 
-
 @app.get("/health")
 @app.get("/api/health")
 async def health():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
-
 
 if __name__ == "__main__":
     import uvicorn
