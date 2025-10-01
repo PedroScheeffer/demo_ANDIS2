@@ -8,21 +8,32 @@ from config.database import get_db
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
+
 def get_user_service(db: Session = Depends(get_db)) -> UserService:
     return UserService(db)
 
+
+"""User endpoints (root accepts both with/without trailing slash).
+Redirects disabled at app level, so expose both to avoid 404.
+"""
+
+
 @router.get("/", response_model=List[User])
+@router.get("", response_model=List[User], include_in_schema=False)
 def get_users(service: UserService = Depends(get_user_service)):
     """Listar todos los usuarios"""
     return service.get_all_users()
 
+
 @router.post("/", response_model=User)
+@router.post("", response_model=User, include_in_schema=False)
 def create_user(
     user: UserCreate,
     service: UserService = Depends(get_user_service)
 ):
     """Crear un nuevo usuario"""
     return service.create_user(user)
+
 
 @router.get("/{user_id}", response_model=User)
 def get_user(
@@ -34,6 +45,7 @@ def get_user(
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user
+
 
 @router.put("/{user_id}", response_model=User)
 def update_user(
@@ -47,6 +59,7 @@ def update_user(
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return updated_user
 
+
 @router.delete("/{user_id}")
 def delete_user(
     user_id: int,
@@ -56,14 +69,3 @@ def delete_user(
     if not service.delete_user(user_id):
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return {"message": "Usuario eliminado exitosamente"}
-
-@router.get("/email/{email}", response_model=User)
-def get_user_by_email(
-    email: str,
-    service: UserService = Depends(get_user_service)
-):
-    """Obtener un usuario por email"""
-    user = service.get_user_by_email(email)
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-    return user
