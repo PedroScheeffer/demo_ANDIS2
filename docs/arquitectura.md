@@ -1,41 +1,58 @@
 @startuml
 
-package gestor_de_proyecto {
-    node backend {
-        [api_gateway] -- http
+skinparam componentStyle rectangle
+skinparam backgroundColor white
+skinparam shadowing false
 
-        node "repos"  {
-            [repo_usr] as r_usr
-            [repo_proyectos] as r_task 
-        } 
+title Diagrama de Componentes - Gestor de Proyectos
 
-        node services {
-            [service_proyectos] -- r_task
-            [service_tareas] -- r_task
-            [service_usuarios] -- r_usr
-        } 
+package "Frontend (Svelte)" {
+    component "View" as view
+    component "Controller" as controller
+    component "Model" as model
+    
+    view -up-> controller
+    controller -up-> model
+}
 
-        database "base_datos" as db
+package "Backend (FastAPI)" {
+    component "API Gateway" as api
+    
+    package "Services" {
+        component "User Service" as s_user
+        component "Project Service" as s_project
+        component "Task Service" as s_task
     }
-
-package frontend {
-    [view_proyecto] as vp
-    [controller_proyecto] as cp
-    [modelo_proyecto] as mp
+    
+    package "Repositories" {
+        component "User Repository" as r_user
+        component "Project Repository" as r_project
+        component "Task Repository" as r_task
+    }
+    
+    api --> s_user
+    api --> s_project
+    api --> s_task
+    
+    s_user --> r_user
+    s_project --> r_project
+    s_task --> r_task
 }
- 
-cp -- mp
-vp -- cp 
-cp -- http
 
-db -up- r_usr
-db -up- r_task
+database "PostgreSQL" as db
 
-api_gateway -- service_proyectos
-api_gateway -- service_tareas
-api_gateway -- service_usuarios
+' Interfaces
+interface "REST API" as rest
+interface "SQL" as sql
 
-}
+' Connections
+model -right-> rest
+rest -right-> api
+r_user -down-> sql
+r_project -down-> sql
+r_task -down-> sql
+sql -down-> db
+
 @enduml
 
 ![alt text](image.png)
