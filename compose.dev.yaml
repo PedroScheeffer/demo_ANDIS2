@@ -1,0 +1,61 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://postgres:example@db:5432/postgres
+    depends_on:
+      - db
+    networks:
+      - my_network
+    # Bind backend port to host for external access
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      # Use the public backend domain so built assets point correctly (adjust if using another domain)
+      - VITE_API_BASE_URL=https://api.scheeffer.net/api
+    depends_on:
+      - backend
+    networks:
+      - my_network
+    # Expose only inside docker network; external access via proxy
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+    networks:
+      - my_network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # Uncomment to access Postgres directly from host (e.g. psql):
+    # ports:
+    #   - "5432:5432"
+
+volumes:
+  postgres_data:
+
+networks:
+  my_network:

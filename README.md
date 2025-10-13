@@ -13,11 +13,15 @@ API REST para gestión básica de proyectos y tareas con autenticación JWT. Dem
 ## Instalación y Ejecución
 
 ### Con Docker (recomendado)
+#### DEV
+```
+docker compose -f compose.dev.yaml up -d --force-recreate --build
+```
+#### PROD
 ```
 docker compose up -d (--build --force-recreate opcional)
 ```
 El backend tiene hotreload, no es necesario volver a reiniciar el container para ver cambios. 
 
-## Notas de Implementación
 
 
