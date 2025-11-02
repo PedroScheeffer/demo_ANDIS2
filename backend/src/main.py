@@ -9,6 +9,7 @@ from api.user_router import router as user_router
 from api.task_router import router as task_router
 from api.auth_router import router as auth_router
 from contextlib import asynccontextmanager
+from src.config.settings import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,7 +17,7 @@ async def lifespan(app: FastAPI):
     init_db()
     yield
 
-app = FastAPI(title="Gestor de Proyectos API", lifespan=lifespan)
+app = FastAPI(title=settings.APP_NAME, lifespan=lifespan, version=settings.APP_VERSION)
 app.router.redirect_slashes = False  # avoid 307 redirects
 
 
@@ -51,6 +52,15 @@ def read_root() -> dict[str, Any]:
 
 @app.get("/health")
 @app.get("/api/health")
+
+@app.get("/info")
+def info():
+    return {
+        "app_name": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "db": settings.DATABASE_URL,
+    }
+
 async def health():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
