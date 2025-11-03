@@ -13,13 +13,19 @@ function getAuthHeaders(): HeadersInit {
 }
 
 export async function getProjects(): Promise<Project[]> {
-  const response = await fetch(`${API_BASE_URL}/projects`, {
-    headers: getAuthHeaders(),
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch projects: ${response.statusText}`);
+  let retry = 1;
+  while (retry <= 6) {
+    const response = await fetch(`${API_BASE_URL}/projects`, {
+      headers: getAuthHeaders(),
+    });
+    if (response.ok) {
+      return response.json();
+    }
+    // wait and then retry
+    await new Promise((resolve) => setTimeout(resolve, retry * 1000));
+    retry += 1;
   }
-  return response.json();
+  throw new Error('Failed to fetch projects after multiple retries');
 }
 
 export async function getProject(id: number): Promise<Project> {
