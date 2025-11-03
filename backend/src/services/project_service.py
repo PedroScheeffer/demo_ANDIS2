@@ -52,7 +52,7 @@ class ProjectService:
         cached_projects = redis_client.get(self.CACHE_KEY)
         if cached_projects:
             print("Cache hit")
-            return True
+            return json.loads(cached_projects)
 
         print("💾 Cache miss — querying DB")
         projects = self.project_repo.get_by_user_id(user_id)
@@ -60,7 +60,7 @@ class ProjectService:
 
         redis_client.setex(self.CACHE_KEY, self.CACHE_TTL, json.dumps(response))
 
-        return False
+        return response
 
     def _to_response(self, project: Project) -> Project:
         """Convert domain model to response model"""
