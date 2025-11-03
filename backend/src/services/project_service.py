@@ -6,6 +6,12 @@ from config.redis_utils import enqueue_project_task
 
 from models.project import Project, ProjectCreate
 from repos.project_repository import ProjectRepository
+from patterns.bulkhead import Bulkhead, BulkheadException
+
+# Create bulkhead instances for different operation types
+read_bulkhead = Bulkhead(max_concurrent_calls=50, max_wait_time=10.0)
+write_bulkhead = Bulkhead(max_concurrent_calls=10, max_wait_time=30.0)
+cache_bulkhead = Bulkhead(max_concurrent_calls=100, max_wait_time=5.0)
 
 class ProjectService:
     CACHE_KEY = "projects:all"
@@ -13,25 +19,27 @@ class ProjectService:
     
     def __init__(self, db_session: Session):
         self.project_repo = ProjectRepository(db_session)
-        
+    
+    @cache_bulkhead
     def delete_cache(self):
         redis_client.delete(self.CACHE_KEY)
 
+    @read_bulkhead
     def get_all_projects(self) -> List[Project]:
         """Get all projects"""
         projects = self.project_repo.get_all()
         return [self._to_response(project) for project in projects]
 
+    @read_bulkhead
     def get_project_by_id(self, project_id: int) -> Optional[Project]:
         """Get project by ID"""
         project = self.project_repo.get_by_id(project_id)
         return self._to_response(project) if project else None
 
-
+    @write_bulkhead
     def create_project(self, project_data: ProjectCreate, user_id: int):
         enqueue_project_task(project_data, user_id)
         return {"message": "Project creation enqueued."}
-
 
     # def create_project(self, project_data: ProjectCreate, user_id: int) -> Project:
     #     """Create a new project"""
@@ -39,6 +47,7 @@ class ProjectService:
     #     self.delete_cache()
     #     return self._to_response(project)
 
+    @write_bulkhead
     def delete_project(self, project_id: int) -> bool:
         """Delete a project"""
         project = self.project_repo.get_by_id(project_id)
@@ -47,6 +56,7 @@ class ProjectService:
             return self.project_repo.delete(project_id)
         return False
 
+    @cache_bulkhead
     def get_projects_by_user(self, user_id: int) -> List[Project]:
         """Get all projects for a specific user"""
         cached_projects = redis_client.get(self.CACHE_KEY)
