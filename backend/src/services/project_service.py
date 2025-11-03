@@ -54,7 +54,7 @@ class ProjectService:
             print("Cache hit")
             return json.loads(cached_projects)
 
-        print("💾 Cache miss — querying DB")
+        print("Cache miss")
         projects = self.project_repo.get_by_user_id(user_id)
         response = [self._to_response(p) for p in projects]
 
