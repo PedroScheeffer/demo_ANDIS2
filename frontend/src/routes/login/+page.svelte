@@ -20,7 +20,6 @@
 
         try {
             await login(username, password);
-
             // Redirect to home (login service already stores auth_response)
             goto('/');
         } catch (e) {
@@ -75,6 +74,23 @@
                     class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-md transition-colors"
                 >
                     {isSubmitting ? 'Logging in...' : 'Login'}
+                </button>
+
+                <div class="mt-6 flex items-center">
+                    <div class="flex-grow h-px bg-gray-200"></div>
+                    <span class="px-2 text-xs text-gray-500">o</span>
+                    <div class="flex-grow h-px bg-gray-200"></div>
+                </div>
+
+                <button
+                    type="button"
+                    class="w-full flex items-center justify-center gap-2 border border-gray-300 rounded-md py-2 text-sm font-medium hover:bg-gray-50 mt-4"
+                    onclick={() => {
+                        window.location.href = "https://api.facumar93.win/auth/google";
+                    }}
+                >
+                    <img src="/google-icon.svg" alt="Google" class="w-5 h-5" />
+                    Ingresar con Google
                 </button>
             </form>
 

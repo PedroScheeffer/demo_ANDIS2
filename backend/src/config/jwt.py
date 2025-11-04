@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import os
 import jwt
 from jwt.exceptions import InvalidTokenError
 
-# Configuration - In production, use environment variables
-SECRET_KEY = "your-secret-key-change-this-in-production"  # TODO: Move to .env
+# Configuration - now driven by environment variables so it's stable across restarts
+SECRET_KEY = os.getenv("SECRET_KEY", "dev-fallback-secret")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 

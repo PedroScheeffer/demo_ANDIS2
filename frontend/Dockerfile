@@ -1,18 +1,16 @@
-FROM node
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy manifests
-COPY package.json package-lock.json* ./
+ARG VITE_API_BASE_URL
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
-# If no lock file present fallback to npm install
+COPY package.json package-lock.json* ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY . .
 
-# Build for production (recommended)
 RUN npm run build
 
-EXPOSE 3000
-# SvelteKit preview (or use an adapter)
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "3000"]
+EXPOSE 4173
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "4173"]

@@ -1,19 +1,45 @@
-services:
+services: 
+  db:
+    image: postgres:16
+    container_name: demo_andis2-db
+    environment:
+      - POSTGRES_PASSWORD=example
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - my_network
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: demo_andis2-backend
     environment:
       - DATABASE_URL=postgresql://postgres:example@db:5432/postgres
+      - ALLOWED_ORIGINS=http://app.localtest.me,http://localhost:3000,https://api.facumar93.win,https://app.facumar93.win
+      - SECRET_KEY=esta_clave_fija_no_cambiar
+    env_file:
+      - ./backend/.env
     depends_on:
       - db
     networks:
       - my_network
-    # Coolify/Traefik will route internally; no need to bind host port
     expose:
       - "5000"
+    ports:
+      - "5000:5000"
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:5000/health || exit 1"]
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request, sys\ntry:\n  with urllib.request.urlopen('http://localhost:5000/api/health', timeout=3) as r:\n    sys.exit(0 if r.status==200 else 1)\nexcept Exception:\n  sys.exit(1)\nPY"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -23,39 +49,21 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: demo_andis2-frontend
     environment:
-      # Use the public backend domain so built assets point correctly (adjust if using another domain)
-      - VITE_API_BASE_URL=https://api.scheeffer.net/api
+      - VITE_API_BASE_URL=https://api.facumar93.win/api
     depends_on:
       - backend
     networks:
       - my_network
-    # Expose only inside docker network; external access via proxy
     expose:
       - "3000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/ || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 25s
-  db:
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: example
-    networks:
-      - my_network
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    # Uncomment to access Postgres directly from host (e.g. psql):
-    # ports:
-    #   - "5432:5432"
+    ports:
+      - "3000:4173"
 
 volumes:
-  postgres_data:
+  db_data:
 
 networks:
   my_network:
+    driver: bridge
