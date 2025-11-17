@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
@@ -7,8 +7,59 @@ from config.jwt import verify_token
 from services.user_service import UserService
 from models.user import User
 
+import httpx
+
 # Security scheme for JWT Bearer token
 security = HTTPBearer()
+
+
+async def verify_token_with_auth_service(request: Request) -> dict:
+    """
+    Verify token by calling the auth service verify endpoint.
+    Returns user info if valid.
+    """
+    AUTH_SERVICE_URL = "http://backend_user:5000/api/auth/verify"
+
+    # Get the Authorization header
+    auth_header = request.headers.get("authorization")
+    if not auth_header:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing authorization header"
+        )
+
+    try:
+        with httpx.Client(timeout=3.0) as client:
+            response = client.post(
+                AUTH_SERVICE_URL,
+                headers={"authorization": auth_header}
+            )
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail="No se pudo contactar al servicio de autenticación"
+        )
+
+    if response.status_code == 401:
+        raise HTTPException(
+            status_code=401,
+            detail="Token inválido o expirado"
+        )
+
+    if response.status_code >= 500:
+        raise HTTPException(
+            status_code=503,
+            detail="El servicio de autenticación respondió con un error interno"
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=401,
+            detail="Error verificando token"
+        )
+
+    return response.json()
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),

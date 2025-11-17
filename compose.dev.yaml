@@ -18,6 +18,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+
   backend_task:
     build:
       context: ./backend_task
@@ -37,6 +38,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+      
   backend_user:
     build:
       context: ./backend_user
@@ -89,6 +91,7 @@ services:
       - my_network
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/01-init.sql
     # Uncomment to access Postgres directly from host (e.g. psql):
     # ports:
     #   - "5432:5432"

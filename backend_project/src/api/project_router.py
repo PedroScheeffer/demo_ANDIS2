@@ -1,15 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List
 from sqlalchemy.orm import Session
 
-from models.user import User
 from models.project import ProjectCreate, Project
 from services.project_service import ProjectService
 from config.database import get_db
-from config.auth_dependency import get_current_user
-
-# Usamos httpx para llamar al microservicio de usuarios
-import httpx
+from config.auth_dependency import verify_token_with_auth_service
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -29,75 +25,49 @@ antes de delegar la lógica al service.
 
 @router.get("/", response_model=List[Project])
 @router.get("", response_model=List[Project], include_in_schema=False)
-def get_projects(
-    current_user: User = Depends(get_current_user),
-    service: ProjectService = Depends(get_project_service)
+async def get_projects(
+    request: Request,
+    service: ProjectService = Depends(get_project_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
     """Listar proyectos del usuario autenticado"""
-    return service.get_projects_by_user(current_user.id)
+    return service.get_projects_by_user(int(auth_verify["user_id"]))
 
 
 @router.post("/", response_model=Project)
 @router.post("", response_model=Project, include_in_schema=False)
-def create_project(
+async def create_project(
     project: ProjectCreate,
-    current_user: User = Depends(get_current_user),
-    service: ProjectService = Depends(get_project_service)
+    request: Request,
+    service: ProjectService = Depends(get_project_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
     """Crear un nuevo proyecto"""
 
     # ==========================================================
-    # 🔍 VALIDACIÓN NUEVA (TFU5):
-    # Antes de crear un proyecto, consultamos al microservicio
-    # USERS para verificar que el usuario realmente exista.
-    #
-    # Esto reemplaza la integridad referencial (foreign key)
-    # que antes garantizaba la base en el monolito.
+    # ✔️ Token VERIFICADO con servicio de autenticación
+    # El usuario es auténtico y su token es válido.
+    # Continuamos con la creación del proyecto.
     # ==========================================================
 
-    USER_SERVICE_URL = "http://backend_user:5000/api/users"
-
-    try:
-        with httpx.Client(timeout=3.0) as client:
-            response = client.get(f"{USER_SERVICE_URL}/{current_user.id}")
-    except Exception:
-        raise HTTPException(
-            status_code=503,
-            detail="No se pudo contactar al servicio de usuarios"
-        )
-
-    if response.status_code == 404:
-        raise HTTPException(
-            status_code=400,
-            detail="El usuario propietario no existe en el servicio USERS"
-        )
-
-    if response.status_code >= 500:
-        raise HTTPException(
-            status_code=503,
-            detail="El servicio USERS respondió con un error interno"
-        )
-
-    # ==========================================================
-    # ✔️ Usuario EXISTE → continuar con la creación normal
-    # ==========================================================
-
-    return service.create_project(project, current_user.id)
+    return service.create_project(project, int(auth_verify["user_id"]))
 
 
 @router.get("/{project_id}", response_model=Project)
-def get_project(
+async def get_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
-    service: ProjectService = Depends(get_project_service)
+    request: Request,
+    service: ProjectService = Depends(get_project_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
     """Obtener un proyecto específico"""
+    user_id = int(auth_verify["user_id"])
     project = service.get_project_by_id(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     # Validar propiedad
-    if project.user_id != current_user.id:
+    if project.user_id != user_id:
         raise HTTPException(
             status_code=403, detail="No tienes permiso para acceder a este proyecto"
         )
@@ -106,18 +76,20 @@ def get_project(
 
 
 @router.delete("/{project_id}")
-def delete_project(
+async def delete_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
-    service: ProjectService = Depends(get_project_service)
+    request: Request,
+    service: ProjectService = Depends(get_project_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
     """Eliminar un proyecto"""
+    user_id = int(auth_verify["user_id"])
     project = service.get_project_by_id(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
 
     # Validar propiedad
-    if project.user_id != current_user.id:
+    if project.user_id != user_id:
         raise HTTPException(
             status_code=403, detail="No tienes permiso para eliminar este proyecto"
         )

@@ -1,44 +1,13 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List
 from sqlalchemy.orm import Session
 
 from models.task import TaskCreate, Task
-from models.user import User
 from services.task_service import TaskService
 from config.database import get_db
-from config.auth_dependency import get_current_user
-
-import httpx
+from config.auth_dependency import verify_token_with_auth_service
 
 router = APIRouter(prefix="/api/tasks", tags=["tasks"])
-
-def verify_user_exists(user_id: int) -> bool:
-    USER_SERVICE_URL = "http://backend_user:5000/api/users"
-
-    try:
-        with httpx.Client(timeout=3.0) as client:
-            response = client.get(f"{USER_SERVICE_URL}/{user_id}")
-    except Exception:
-        raise HTTPException(
-            status_code=503,
-            detail="No se pudo contactar al servicio de usuarios"
-        )
-        return False
-
-    if response.status_code == 404:
-        raise HTTPException(
-            status_code=400,
-            detail="El usuario propietario no existe en el servicio USERS"
-        )
-        return False
-
-    if response.status_code >= 500:
-        raise HTTPException(
-            status_code=503,
-            detail="El servicio USERS respondió con un error interno"
-        )
-        return False
-    return True
 
 
 def get_task_service(db: Session = Depends(get_db)) -> TaskService:
@@ -52,124 +21,131 @@ See project_router for rationale.
 
 @router.get("/", response_model=List[Task])
 @router.get("", response_model=List[Task], include_in_schema=False)
-def get_tasks(
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+async def get_tasks(
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Listar todas las tareas"""
-        return service.get_all_tasks()
+    """Listar todas las tareas"""
+    return service.get_all_tasks()
 
 
 @router.post("/", response_model=Task)
 @router.post("", response_model=Task, include_in_schema=False)
-def create_task(
+async def create_task(
     task: TaskCreate,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Crear una nueva tarea"""
+    """Crear una nueva tarea"""
+    try:
         return service.create_task(task)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{task_id}", response_model=Task)
-def get_task(
+async def get_task(
     task_id: int,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Obtener una tarea específica"""
-        task = service.get_task_by_id(task_id)
-        if not task:
-            raise HTTPException(status_code=404, detail="Tarea no encontrada")
-        return task
+    """Obtener una tarea específica"""
+    task = service.get_task_by_id(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    return task
 
 
 @router.put("/{task_id}", response_model=Task)
-def update_task(
+async def update_task(
     task_id: int,
     task: TaskCreate,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Actualizar una tarea"""
+    """Actualizar una tarea"""
+    try:
         updated_task = service.update_task(task_id, task)
         if not updated_task:
             raise HTTPException(status_code=404, detail="Tarea no encontrada")
         return updated_task
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.patch("/{task_id}/complete", response_model=Task)
-def complete_task(
+async def complete_task(
     task_id: int,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Marcar una tarea como completada"""
-        completed_task = service.mark_task_completed(task_id)
-        if not completed_task:
-            raise HTTPException(status_code=404, detail="Tarea no encontrada")
-        return completed_task
+    """Marcar una tarea como completada"""
+    completed_task = service.mark_task_completed(task_id)
+    if not completed_task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    return completed_task
 
 
 @router.delete("/{task_id}")
-def delete_task(
+async def delete_task(
     task_id: int,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Eliminar una tarea"""
-        if not service.delete_task(task_id):
-            raise HTTPException(status_code=404, detail="Tarea no encontrada")
-        return {"message": "Tarea eliminada exitosamente"}
+    """Eliminar una tarea"""
+    if not service.delete_task(task_id):
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    return {"message": "Tarea eliminada exitosamente"}
 
 
 @router.get("/project/{project_id}", response_model=List[Task])
-def get_tasks_by_project(
+async def get_tasks_by_project(
     project_id: int,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Obtener todas las tareas de un proyecto"""
-        return service.get_tasks_by_project(project_id)
+    """Obtener todas las tareas de un proyecto"""
+    return service.get_tasks_by_project(project_id)
 
 
 @router.get("/user/{user_id}", response_model=List[Task])
-def get_tasks_by_user(
+async def get_tasks_by_user(
     user_id: int,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Obtener todas las tareas asignadas a un usuario"""
-        return service.get_tasks_by_user(user_id)
+    """Obtener todas las tareas asignadas a un usuario"""
+    return service.get_tasks_by_user(user_id)
 
 
 @router.get("/{task_id}/subtasks", response_model=List[Task])
-def get_subtasks(
+async def get_subtasks(
     task_id: int,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Obtener todas las subtareas de una tarea"""
-        return service.get_subtasks(task_id)
+    """Obtener todas las subtareas de una tarea"""
+    return service.get_subtasks(task_id)
 
 
 @router.post("/{parent_task_id}/subtasks", response_model=Task)
-def create_subtask(
+async def create_subtask(
     parent_task_id: int,
     task: TaskCreate,
-    current_user: User = Depends(get_current_user),
-    service: TaskService = Depends(get_task_service)
+    request: Request,
+    service: TaskService = Depends(get_task_service),
+    auth_verify: dict = Depends(verify_token_with_auth_service)
 ):
-    if (verify_user_exists(current_user.id)):
-        """Crear una subtarea"""
+    """Crear una subtarea"""
+    try:
         subtask = service.create_subtask(parent_task_id, task)
         if not subtask:
             raise HTTPException(
@@ -177,3 +153,5 @@ def create_subtask(
                 detail="No se puede crear subtarea. La tarea padre no permite subtareas o no existe"
             )
         return subtask
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

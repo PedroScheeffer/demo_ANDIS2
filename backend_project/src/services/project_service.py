@@ -20,7 +20,7 @@ class ProjectService:
 
     def create_project(self, project_data: ProjectCreate, user_id: int) -> Project:
         """Create a new project"""
-        check_user_exist()
+        # User is already verified by the auth service via verify_token_with_auth_service
         project = self.project_repo.create(project_data, user_id)
         return self._to_response(project)
 
