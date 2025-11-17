@@ -41,8 +41,6 @@ package "Microservices (FastAPI)" {
         s_task --> r_task
     }
 
-    note bottom of proj_router : Verifica tokens\ncon User Service
-    note bottom of task_router : Verifica tokens\ncon User Service\ny proyectos con\nProject Service
 }
 
 database "PostgreSQL" as db
