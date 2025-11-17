@@ -23,7 +23,7 @@ package "Microservices (FastAPI)" {
         s_user --> r_user
     }
 
-    package "Project Service (puerto 5000)" {
+    package "Project Service (puerto 5002)" {
         component "Project Router" as proj_router
         component "Project Service" as s_project
         component "Project Repository" as r_project
@@ -32,7 +32,7 @@ package "Microservices (FastAPI)" {
         s_project --> r_project
     }
 
-    package "Task Service (puerto 5000)" {
+    package "Task Service (puerto 5001)" {
         component "Task Router" as task_router
         component "Task Service" as s_task
         component "Task Repository" as r_task
@@ -41,12 +41,18 @@ package "Microservices (FastAPI)" {
         s_task --> r_task
     }
 
-}
+    database "db_task" as db_task
+    database "db_project" as db_project
+    database "db_user" as db_user
 
-database "PostgreSQL" as db
+}
 
 ' Interfaces
 interface "REST API" as rest
+
+r_user -down-> db_user
+r_project -down-> db_project
+r_task -down-> db_task
 
 ' Inter-service communication
 proj_router ..> auth_router : verify_token
@@ -59,9 +65,6 @@ rest -right-> auth_router
 rest -right-> proj_router
 rest -right-> task_router
 
-r_user -down-> db
-r_project -down-> db
-r_task -down-> db
 
 @enduml
 
